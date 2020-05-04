@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+from experience_replay import experienceReplay
+
 class DQN(nn.Module):
     
     def __init__(self, outputs, h = 84, w = 84):
@@ -19,9 +21,9 @@ class DQN(nn.Module):
         
         super(DQN, self).__init__()
         
-        self.conv1 == nn.Conv2d(4, 32, kernel_size = 8, stride = 4)
-        self.conv2 == nn.Conv2d(32, 64, kernel_size = 4, stride = 2)
-        self.conv3 == nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
+        self.conv1 = nn.Conv2d(4, 32, kernel_size = 8, stride = 4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size = 4, stride = 2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
         
         def conv_2d_size_output(size, kernel_size, stride):
             return (size - kernel_size) // stride + 1
