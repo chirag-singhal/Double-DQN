@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 class DQN(nn.Module):
     
-    def __init__(self, h, w, outputs):
+    def __init__(self, outputs, h = 84, w = 84):
         """
             The input to the network is a 84 * 84 * 4 tensor containing a rescaled,
             and gray scale version of last four frames.
