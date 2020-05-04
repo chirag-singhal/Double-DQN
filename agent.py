@@ -36,4 +36,23 @@ class Agent():
                             lr=self.learning_rate, alpha=0.99, eps=1e-08, 
                             weight_decay=0, momentum=self.momentum
                         )
-        
+    def train(self):
+        count = 0
+        for i in range(self.num_episodes):
+            self.env.reset()
+            for k in range(4):
+                state[:,:,k] = get_screen() 
+            for j in count():
+                
+                action = self.primary_network.select_action(state)
+                _, reward, done, _ = env.step(action)
+                
+                if not done:
+                        for k in range(4):
+                            next_state[:,:,k] = get_screen() 
+                else:
+                    next_state = None
+                
+                self.memory.add(state, action, reward, next_state)
+                
+                
