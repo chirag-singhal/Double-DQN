@@ -21,7 +21,7 @@ class Agent():
         
         #Experience Replay Memory
         self.memory_size = 10000000
-        self.memory = ExperienceReplay(self.memory_size)
+        self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
         self.primary_network = DQN(self.num_actions)
