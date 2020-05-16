@@ -1,8 +1,10 @@
+import numpy as np
 
+import torch as nn
 
 class Agent():
     
-    def __init__(self, env):
+    def __init__(self, game_name):
         
         #Set hyperparameters
         self.discount = 0.99
@@ -15,9 +17,9 @@ class Agent():
         self.num_steps = 50000000
         self.max_episodes = 10000
         
-        #Environment
-        self.env = env
-        self.num_actions = env.action_space.n
+        #Game
+        self.game = Game(game_name)
+        self.num_actions = self.game.n_actions
         
         #Experience Replay Memory
         self.memory_size = 10000000
@@ -37,40 +39,56 @@ class Agent():
                             lr=self.learning_rate, alpha=0.99, eps=1e-08, 
                             weight_decay=0, momentum=self.momentum
                         )
+        
+    def select_action(self, steps, state):
+        #linear decay of epsilon value
+        epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
+        if random.random() < epsilon:
+            #exploration
+            return np.random.choice(np.arrange(self.num_actions))
+        else:
+            #exploitation
+            #use target_network to estimate q-values of actions
+            return nn.argmax(self.target_network(state))
+    
     def train(self):
         steps = 0
-        primary_net_counter = 0
+        total_reward = 0
+        record_rewards = []
         for i in range(self.max_episodes):
-            self.env.reset()
-            for k in range(4):
-                state[:,:,k] = get_screen() 
+            self.game.env.reset()
+            state = self.game.get_input()
             for j in count():
                 #Update counters
                 steps += 1
-                primary_net_counter = (primary_net_counter) % 4
                 
                 #Select action using greedy policy
-                #Not Implemented Yet
-                action = self.primary_network.select_action(state)
-                _, reward, done, _ = env.step(action)
+                action = self.primary_network.select_action(steps, state)
+                reward, done = self.game.step(action)
+                
+                total_reward += reward
                 
                 if not done:
                         #get the next state
-                        for k in range(4):
-                            next_state[:,:,k] = get_screen() 
+                        next_state = self.game.get_input()
                 else:
                     next_state = None
                 
                 self.memory.storeExperience(state, action, reward, next_state, done)
                 
-                if(primary_net_counter == 0 || done || steps == self.num_steps):
-                        #Batch Train from experiences after every four steps 
-                        #or if final state is reached
+                if(done || steps == self.num_steps):
+                        #Batch Train from experiences if final state is reached
                         #or if the total steps is reached
                         #Not Implemented Yet
                         self.primary_network.batch_train()
+                        record_rewards.append(total_reward)
+                        total_reward = 0
+                        break
+                        
+                #next state assigned to current state
+                state = next_state
                 
-                if(counter % self.target_update == 0):
+                if(steps % self.target_update == 0):
                     #Update the target_network
                     self.target_network.load_state_dict(self.primary_network.state_dict())
                     self.target_network.eval()
@@ -81,5 +99,7 @@ class Agent():
             
             if(steps == self.num_steps):
                 break
+                
+        return record_rewards
                 
                 
