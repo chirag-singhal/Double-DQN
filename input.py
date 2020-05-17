@@ -47,6 +47,14 @@ class Game():
         # Each element in buffer is a tensor of 84x84 dimensions.
         # This function returns tensor of 84x84x4 dimensions.
         return torch.stack(torch.tuple(self.buffer), dim=2)
+    
+    def get_n_actions():
+        #return number of actions
+        return self.n_actions
+    
+    def reset_env():
+        #reset the gym environment
+        self.env.reset()
 
 
     def step(action):

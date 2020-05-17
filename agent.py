@@ -19,7 +19,7 @@ class Agent():
         
         #Game
         self.game = Game(game_name)
-        self.num_actions = self.game.n_actions
+        self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
         self.memory_size = 10000000
@@ -34,13 +34,23 @@ class Agent():
         
         #Optimiser
         self.momentum = 0.95
-        self.optimizer = optim.RMSprop(
+        self.optimizer.zero_grad()
+        
+        #Run backward pass and calculate gradients= optim.RMSprop(
                             self.primary_net.parameters(), 
                             lr=self.learning_rate, alpha=0.99, eps=1e-08, 
                             weight_decay=0, momentum=self.momentum
                         )
         
     def select_action(self, steps, state):
+        """
+            Selects next action to perform using greedy policy. Target network is used to 
+            estimate q-values.
+            
+            Arguments:
+                steps - Number of steps performed till now
+                state - Current state of atari game, contains last 4 frames. 
+        """
         #linear decay of epsilon value
         epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
         if random.random() < epsilon:
@@ -50,20 +60,62 @@ class Agent():
             #exploitation
             #use target_network to estimate q-values of actions
             return nn.argmax(self.target_network(state))
+        
+    
+    def batch_train():
+        """
+            Performs batch training on the network. 
+        """
+        if(self.memory.number_of_experiences() < batch_size):
+            #Not enough experiences for batch training
+            return
+        
+        #Sample batch from replay memory
+        batch_states, batch_actions, batch_rewards, batch_next_states, done = self.memory.selectBatch(self.batch_size)
+        
+        batch_states = nn.from_numpy(batch_states).type(dtype)
+        batch_actions = nn.from_numpy(batch_actions).type(dtype)
+        batch_rewards = nn.from_numpy(batch_rewards).type(dtype)
+        batch_next_states = nn.from_numpy(batch_next_state).type(dtype)
+        not_done = nn.from_numpy(1 - done).type(dtype)
+        
+        Q_t_values = self.target_network(batch_states)[:, batch_actions]
+        
+        next_Q_t_primary_values = not_done * self.target_network(batch_next_states)
+        next_Q_t_target_values = not_done * self.target_network(batch_next_states)
+        
+        next_Q_t_values_max = next_Q_t_target_values[:, np.argmax(next_Q_t_primary_values, axis=0)]
+        
+        #Double Q-Learning
+        expected_Q_values = batch_rewards + (self.discount * next_Q_t_values_max)
+        
+        #Calulating loss
+        loss = np.mean(np.square(Q_t_values - expected_Q_values))
+        
+        #Clear gradients from last backward pass
+        self.optimizer.zero_grad()
+        
+        #Run backward pass and calculate gradients
+        loss.backward()
+        
+        #Update weights from calculated gradients
+        self.optimizer.step()
+        
+        
     
     def train(self):
         steps = 0
         total_reward = 0
         record_rewards = []
         for i in range(self.max_episodes):
-            self.game.env.reset()
+            self.game.reset_env()
             state = self.game.get_input()
             for j in count():
                 #Update counters
                 steps += 1
                 
                 #Select action using greedy policy
-                action = self.primary_network.select_action(steps, state)
+                action = select_action(steps, state)
                 reward, done = self.game.step(action)
                 
                 total_reward += reward
@@ -74,13 +126,12 @@ class Agent():
                 else:
                     next_state = None
                 
+                #Store experiences in replay memory for batch training
                 self.memory.storeExperience(state, action, reward, next_state, done)
                 
-                if(done || steps == self.num_steps):
+                if(done):
                         #Batch Train from experiences if final state is reached
-                        #or if the total steps is reached
-                        #Not Implemented Yet
-                        self.primary_network.batch_train()
+                        batch_train()
                         record_rewards.append(total_reward)
                         total_reward = 0
                         break

@@ -48,3 +48,11 @@ class experienceReplay(object):
         terminal = self.terminal_memory[batch]
 
         return states, actions, rewards, next_state, terminal
+    
+    def number_of_experiences():
+        #Returns total number of experiences stored in memory
+        if(count >= self.size):
+            return self.size
+        else:
+            return count
+        
