@@ -1,6 +1,7 @@
 import torch as nn
 import random
 
+
 class experienceReplay(object):
     def __init__(self, max_size, input_shape, n_actions):
         self.size = max_size
@@ -12,11 +13,11 @@ class experienceReplay(object):
         terminal_memory helps to identify if it's the end of an episode.
 
         """
-        self.state_memory = nn.zeros((self.size, input_shape), dtype = nn.float32)
-        self.next_state_memory = nn.zeros((self.mem_size, input_shape), dtype = nn.float32)
-        self.action_memory = nn.zeros(self.mem_size, dtype = nn.float32)
-        self.reward_memory = nn.zeros(self.mem_size, dtype = nn.float32)
-        self.terminal_memory = nn.zeros(self.mem_size, dtype = nn.int32)
+        self.state_memory = nn.zeros((self.size, *input_shape), dtype = nn.float32)
+        self.next_state_memory = nn.zeros((self.size, *input_shape), dtype = nn.float32)
+        self.action_memory = nn.zeros(self.size, dtype = nn.float32)
+        self.reward_memory = nn.zeros(self.size, dtype = nn.float32)
+        self.terminal_memory = nn.zeros(self.size, dtype = nn.int32)
 
     def storeExperience(self, state, action, reward, next_state, is_done):
         """

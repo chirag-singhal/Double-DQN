@@ -3,7 +3,7 @@ from collections import deque
 import numpy as np
 
 import torch
-import torch.transforms as T
+import torchvision.transforms as T
 
 import gym
 from gym.wrappers import AtariPreprocessing
@@ -24,28 +24,32 @@ class Game():
         self.n_actions = self.env.action_space.n
 
         init_screen = self.get_screen()
-        # self.scr_h, self.scr_h = init_screen.shape
+        self.scr_dims = init_screen.shape
 
         for _ in range(self.frameskip):
             self.buffer.append(init_screen.clone())
 
     def get_screen(self):
-        screen = self.envWrapped._get_obs().transpose((2, 0, 1))
+        screen = self.envWrapped._get_obs()
         screen = torch.from_numpy(screen).to(self.device)
         return screen
 
-    def get_input():
+    def get_input(self):
         # Each element in buffer is a tensor of 84x84 dimensions.
         # This function returns tensor of 84x84x4 dimensions.
-        return torch.stack(tuple(self.deque), dim=2)
+        return torch.stack(tuple(self.buffer), dim=2)
     
-    def get_n_actions():
-        #return number of actions
+    def get_n_actions(self):
+        # return number of actions
         return self.n_actions
     
-    def reset_env():
-        #reset the gym environment
+    def reset_env(self):
+        # reset the gym environment
         self.env.reset()
+
+    def get_screen_dims(self):
+        # return the screen dimensions
+        return self.scr_dims
 
     def step(self, action):
         reward = 0

@@ -1,6 +1,15 @@
+from itertools import count
+import random
+
 import numpy as np
 
 import torch as nn
+import torch.optim as optim
+
+from game import Game
+from experience_replay import experienceReplay
+from dqn import DQN
+
 
 class Agent():
     
@@ -22,8 +31,8 @@ class Agent():
         self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
-        self.memory_size = 10000000
-        self.memory = experienceReplay(self.memory_size)
+        self.memory_size = 10000 # 10000000
+        self.memory = experienceReplay(self.memory_size, self.game.get_screen_dims(), self.num_actions)
         
         #Double Deep Q Network
         self.primary_network = DQN(self.num_actions)
@@ -34,7 +43,7 @@ class Agent():
         
         #Optimiser
         self.momentum = 0.95
-        self.optimizer = self.primary_net.parameters(), 
+        self.optimizer = optim.RMSprop(self.primary_network.parameters(), 
                             lr=self.learning_rate, alpha=0.99, eps=1e-08, 
                             weight_decay=0, momentum=self.momentum
                         )
@@ -55,7 +64,7 @@ class Agent():
         epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
         if random.random() < epsilon:
             #exploration
-            return np.random.choice(np.arrange(self.num_actions))
+            return np.random.choice(np.arange(self.num_actions))
         else:
             #exploitation
             #use target_network to estimate q-values of actions
@@ -119,7 +128,7 @@ class Agent():
                 steps += 1
                 
                 #Select action using greedy policy
-                action = select_action(steps, state)
+                action = self.select_action(steps, state)
                 reward, done = self.game.step(action)
                 
                 total_reward += reward
@@ -135,7 +144,7 @@ class Agent():
                 
                 if(done):
                         #Batch Train from experiences if final state is reached
-                        batch_train()
+                        self.batch_train()
                         record_rewards.append(total_reward)
                         total_reward = 0
                         break

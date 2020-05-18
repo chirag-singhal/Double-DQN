@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from experience_replay import experienceReplay
 
 class DQN(nn.Module):
     
