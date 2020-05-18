@@ -34,13 +34,13 @@ class Agent():
         
         #Optimiser
         self.momentum = 0.95
-        self.optimizer.zero_grad()
-        
-        #Run backward pass and calculate gradients= optim.RMSprop(
-                            self.primary_net.parameters(), 
+        self.optimizer = self.primary_net.parameters(), 
                             lr=self.learning_rate, alpha=0.99, eps=1e-08, 
                             weight_decay=0, momentum=self.momentum
                         )
+        #clear gradients
+        self.optimizer.zero_grad()
+        
         
     def select_action(self, steps, state):
         """
@@ -64,7 +64,11 @@ class Agent():
     
     def batch_train():
         """
-            Performs batch training on the network. 
+            Performs batch training on the network. Implements Double Q learning on network. 
+            It evaluates greedy policy using primary network but its value is 
+            estimated using target network.
+            Loss funtion used is Mean Squared Error.
+            Uses RMSprop for gradient based optimisation.
         """
         if(self.memory.number_of_experiences() < batch_size):
             #Not enough experiences for batch training
