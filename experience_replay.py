@@ -1,11 +1,14 @@
 import torch
 import random
+import collections as c
 
 
 class experienceReplay(object):
-    def __init__(self, max_size, itorchut_shape, n_actions):
+    def __init__(self, max_size):
         self.size = max_size
         self.count = 0
+        self.store = c.deque();
+        self.store1 = c.deque();
         """
         State, action, reward and next state are stored in memory
         to train the network. 
@@ -13,16 +16,19 @@ class experienceReplay(object):
         terminal_memory helps to identify if it's the end of an episode.
 
         """
+        """
         self.state_memory = torch.zeros((self.size, *itorchut_shape), dtype = torch.float32)
         self.next_state_memory = torch.zeros((self.size, *itorchut_shape), dtype = torch.float32)
         self.action_memory = torch.zeros(self.size, dtype = torch.float32)
         self.reward_memory = torch.zeros(self.size, dtype = torch.float32)
         self.terminal_memory = torch.zeros(self.size, dtype = torch.int32)
+        """
 
     def storeExperience(self, state, action, reward, next_state, is_done):
         """
         Some old samples are removed and new ones are stored in the memory.
 
+        """
         """
         i = self.count % self.size
         self.state_memory[i] = state.transpose(0, 2)
@@ -30,6 +36,11 @@ class experienceReplay(object):
         self.action_memory[i] = action
         self.reward_memory[i] = reward
         self.terminal_memory[i] = is_done
+        self.count += 1
+        """
+        experience = c.namedtuple('experience', 'state, action, reward, next_state, is_done')
+        t = experience(state, action, reward, next_state, is_done)
+        self.store.append(t)
         self.count += 1
 
     def selectBatch(self, batch_size):
@@ -40,8 +51,8 @@ class experienceReplay(object):
         max_mem = min(self.count, self.size)
         
         #batch has the random indices selected from max_mem
-        batch = random.sample(max_mem, batch_size, replace = False)
-        
+        batch = random.sample(range(max_mem), batch_size)
+        """
         states = self.state_memory[batch]
         actions = self.action_memory[batch]
         rewards = self.reward_memory[batch]
@@ -49,6 +60,11 @@ class experienceReplay(object):
         terminal = self.terminal_memory[batch]
 
         return states, actions, rewards, next_state, terminal
+        """
+        for i in range(batch_size):
+            t = self.store[batch[i]]
+            self.store1.append(t)
+        return self.store1
     
     def number_of_experiences(self):
         #Returns total number of experiences stored in memory
