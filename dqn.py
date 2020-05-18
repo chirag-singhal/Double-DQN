@@ -35,12 +35,12 @@ class DQN(nn.Module):
         convh1 = conv_2d_size_output(h, 8, 4)
         convh2 = conv_2d_size_output(convh1, 4, 2)
         convh3 = conv_2d_size_output(convh2, 3, 1)
-        linear_input_size = convw3 * convh3 * 64
+        self.linear_input_size = convw3 * convh3 * 64
         
-        self.fc4 = nn.Linear(linear_input_size, 512)
+        self.fc4 = nn.Linear(self.linear_input_size, 512)
         self.fc5 = nn.Linear(512, outputs)
         
-    def forward(x):
+    def forward(self, x):
         """
             Perform forward propagation of the network. Activation function used is ReLU.
             
@@ -51,6 +51,9 @@ class DQN(nn.Module):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
+        
+        #Flatten the output from Convolution Layers
+        x = x.view(-1, self.linear_input_size)
         
         x = F.relu(self.fc4(x))
         x = F.relu(self.fc5(x))
