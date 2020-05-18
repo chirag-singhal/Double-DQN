@@ -24,7 +24,8 @@ class Game():
         self.n_actions = self.env.action_space.n
 
         init_screen = self.get_screen()
-        self.scr_dims = init_screen.shape
+        # Screen dimension is represented as (CHW) for PyTorch
+        self.scr_dims = tuple([self.frameskip] + list(init_screen.shape))
 
         for _ in range(self.frameskip):
             self.buffer.append(init_screen.clone())

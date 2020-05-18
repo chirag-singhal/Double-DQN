@@ -64,14 +64,14 @@ class Agent():
         epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
         if random.random() < epsilon:
             #exploration
-            return np.random.choice(np.arange(self.num_actions))
+            return nn.tensor(np.random.choice(np.arange(self.num_actions)))
         else:
             #exploitation
             #use target_network to estimate q-values of actions
             return nn.argmax(self.target_network(state))
         
     
-    def batch_train():
+    def batch_train(self):
         """
             Performs batch training on the network. Implements Double Q learning on network. 
             It evaluates greedy policy using primary network but its value is 
@@ -86,11 +86,11 @@ class Agent():
         #Sample batch from replay memory
         batch_states, batch_actions, batch_rewards, batch_next_states, done = self.memory.selectBatch(self.batch_size)
         
-        batch_states = nn.from_numpy(batch_states).type(dtype)
-        batch_actions = nn.from_numpy(batch_actions).type(dtype)
-        batch_rewards = nn.from_numpy(batch_rewards).type(dtype)
-        batch_next_states = nn.from_numpy(batch_next_state).type(dtype)
-        not_done = nn.from_numpy(1 - done).type(dtype)
+        batch_states = nn.from_numpy(batch_states).type(nn.float32)
+        batch_actions = nn.from_numpy(batch_actions).type(nn.float32)
+        batch_rewards = nn.from_numpy(batch_rewards).type(nn.float32)
+        batch_next_states = nn.from_numpy(batch_next_state).type(nn.float32)
+        not_done = nn.from_numpy(1 - done).type(nn.int32)
         
         Q_t_values = self.target_network(batch_states)[:, batch_actions]
         
@@ -115,7 +115,6 @@ class Agent():
         self.optimizer.step()
         
         
-    
     def train(self):
         steps = 0
         total_reward = 0
@@ -139,6 +138,13 @@ class Agent():
                 else:
                     next_state = None
                 
+                # Convert everything to one format (CPU PyTorch Tensor)
+                state = state.cpu()
+                next_state = next_state.cpu()
+                action = action.cpu()
+                reward = nn.tensor(reward)
+                done = nn.tensor(done)
+
                 #Store experiences in replay memory for batch training
                 self.memory.storeExperience(state, action, reward, next_state, done)
                 

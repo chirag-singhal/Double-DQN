@@ -47,6 +47,7 @@ class DQN(nn.Module):
                 x: Input to the network
         """
         
+        print(x.size())
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
