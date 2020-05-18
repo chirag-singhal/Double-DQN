@@ -6,47 +6,38 @@ import torch
 import torch.transforms as T
 
 import gym
+from gym.wrappers import AtariPreprocessing
 
 
 class Game():
 
-    # The transform grayscales and resizes the image to 84x84
-    transform = T.compose([
-        T.ToPILImage(),
-        T.Resize((84, 84), interpolation=Image.BILINEAR),
-        T.Grayscale(num_output_channels=1),
-        T.ToTensor()])
+    def __init__(self, game_name, frameskip=4, device='cpu', grayscale_obs=True, scale_obs=False):
+        self.frameskip = frameskip
+        self.device = device
 
-    def __init__(self, game_name, num_frames_per_step=4, device='cpu'):
-        self.num_frames_per_step = num_frames_per_step
-        self.buffer = deque([], self.num_frames_per_step)
-        
+        self.buffer = deque([], self.frameskip)
+
         self.env = gym.make(game_name)
-        self.env.reset()
-        
+        self.envWrapped = AtariPreprocessing(self.env, frame_skip=1, grayscale_obs=grayscale_obs, scale_obs=scale_obs)
+        self.envWrapped.reset()
+
         self.n_actions = self.env.action_space.n
 
         init_screen = self.get_screen()
-        self.scr_h, self.scr_w = init_screen.shape
+        # self.scr_h, self.scr_h = init_screen.shape
 
-        for _ in range(len(self.num_frames_per_step)):
+        for _ in range(self.frameskip):
             self.buffer.append(init_screen.clone())
 
-    def get_screen():
-        # Gym returns screen as HWC numpy array, convert it to CHW
-        screen = self.env.render(mode='rgb_array').transpose((2, 0, 1))
-
-        # Convert to float, rescale
-        screen = np.ascontiguousarray(screen, dtype=np.float32) / 255.
-        screen = torch.from_numpy(screen)
-        screen = transform(screen).to(device)
-        # The output is now 84x84
+    def get_screen(self):
+        screen = self.envWrapped._get_obs().transpose((2, 0, 1))
+        screen = torch.from_numpy(screen).to(self.device)
         return screen
 
     def get_input():
         # Each element in buffer is a tensor of 84x84 dimensions.
         # This function returns tensor of 84x84x4 dimensions.
-        return torch.stack(torch.tuple(self.buffer), dim=2)
+        return torch.stack(tuple(self.deque), dim=2)
     
     def get_n_actions():
         #return number of actions
@@ -56,14 +47,37 @@ class Game():
         #reset the gym environment
         self.env.reset()
 
-
-    def step(action):
+    def step(self, action):
         reward = 0
         done = False
-        for step in range(self.num_frames_per_step):
-            _, _reward, done, _ = self.env.step(action)
+        for step in range(self.frameskip):
+            _, _reward, done, _ = self.envWrapped.step(action)
             self.buffer.append(self.get_screen())
             reward += _reward
             if done:
                 break
         return reward, done
+
+
+# Actions in OpenAI Gym ALE
+# -------------------------
+# ACTION_MEANING = {
+#     0: "NOOP",
+#     1: "FIRE",
+#     2: "UP",
+#     3: "RIGHT",
+#     4: "LEFT",
+#     5: "DOWN",
+#     6: "UPRIGHT",
+#     7: "UPLEFT",
+#     8: "DOWNRIGHT",
+#     9: "DOWNLEFT",
+#     10: "UPFIRE",
+#     11: "RIGHTFIRE",
+#     12: "LEFTFIRE",
+#     13: "DOWNFIRE",
+#     14: "UPRIGHTFIRE",
+#     15: "UPLEFTFIRE",
+#     16: "DOWNRIGHTFIRE",
+#     17: "DOWNLEFTFIRE",
+# }
