@@ -97,19 +97,12 @@ class Agent():
         batch_actions = torch.tensor(batch_actions)
         batch_rewards = torch.tensor(batch_rewards)
         not_done = ~torch.tensor(done)
-        # batch_states = torch.from_numpy(batch_states).type(torch.float32)
-        # batch_actions = torch.from_numpy(batch_actions).type(torch.int32)
-        # batch_rewards = torch.from_numpy(batch_rewards).type(torch.float32)
-        # batch_next_states = torch.from_numpy(batch_next_state).type(torch.float32)
-        # not_done = torch.from_numpy(1 - done).type(torch.int32)
-
+        
         Q_t_values = self.target_network(batch_states)[:, batch_actions]
 
-        # next_Q_t_primary_values = not_done * self.primary_network(batch_next_states)
-        # next_Q_t_target_values = not_done * self.target_network(batch_next_states)
-        next_Q_t_primary_values = self.primary_network(batch_next_states)
-        next_Q_t_target_values = self.target_network(batch_next_states)
-
+        next_Q_t_primary_values = not_done * self.primary_network(batch_next_states)
+        next_Q_t_target_values = not_done * self.target_network(batch_next_states)
+        
         next_Q_t_values_max = next_Q_t_target_values[:, torch.argmax(next_Q_t_primary_values, axis=1)]
         
         #Double Q-Learning
@@ -145,11 +138,12 @@ class Agent():
                 
                 total_reward += reward
                 
-                if not done:
-                        #get the next state
-                        next_state = self.game.get_input()
-                else:
-                    next_state = None
+                # if not done:
+                #         #get the next state
+                #         next_state = self.game.get_input()
+                # else:
+                #     next_state = None
+                next_state = self.game.get_input()
                 
                 # Convert all arrays to CPU Torch tensor
                 state = state.cpu()
