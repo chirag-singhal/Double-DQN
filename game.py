@@ -37,8 +37,8 @@ class Game():
 
     def get_input(self):
         # Each element in buffer is a tensor of 84x84 dimensions.
-        # This function returns tensor of 84x84x4 dimensions.
-        return torch.stack(tuple(self.buffer), dim=2)
+        # This function returns tensor of 4x84x84 dimensions.
+        return torch.stack(tuple(self.buffer), dim=0).type(torch.float)
     
     def get_n_actions(self):
         # return number of actions

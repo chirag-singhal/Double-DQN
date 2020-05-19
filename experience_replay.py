@@ -4,10 +4,13 @@ import collections as c
 
 
 class experienceReplay(object):
+
+    experience = c.namedtuple('experience', 'state, action, reward, next_state, is_done')
+
     def __init__(self, max_size):
         self.size = max_size
         self.count = 0
-        self.store = c.deque();
+        self.store = c.deque([]);
         self.store1 = c.deque();
         """
         State, action, reward and next state are stored in memory
@@ -38,8 +41,7 @@ class experienceReplay(object):
         self.terminal_memory[i] = is_done
         self.count += 1
         """
-        experience = c.namedtuple('experience', 'state, action, reward, next_state, is_done')
-        t = experience(state, action, reward, next_state, is_done)
+        t = experienceReplay.experience(state, action, reward, next_state, is_done)
         self.store.append(t)
         self.count += 1
 
@@ -51,6 +53,9 @@ class experienceReplay(object):
         max_mem = min(self.count, self.size)
         
         #batch has the random indices selected from max_mem
+        # NOTE:
+        # For now, there is a bug in the implementation that newer memories
+        # (memories after max_size) never get used
         batch = random.sample(range(max_mem), batch_size)
         """
         states = self.state_memory[batch]
@@ -68,8 +73,8 @@ class experienceReplay(object):
     
     def number_of_experiences(self):
         #Returns total number of experiences stored in memory
-        if(count >= self.size):
+        if(self.count >= self.size):
             return self.size
         else:
-            return count
+            return self.count
         

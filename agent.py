@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 
-import torch as nn
+import torch
 import torch.optim as optim
 
 from game import Game
@@ -13,7 +13,7 @@ from dqn import DQN
 
 class Agent():
     
-    def __init__(self, game_name):
+    def __init__(self, game_name, device='cpu'):
         
         #Set hyperparameters
         self.discount = 0.99
@@ -26,13 +26,16 @@ class Agent():
         self.num_steps = 50000000
         self.max_episodes = 10000
         
+        #Device
+        self.device = device
+
         #Game
         self.game = Game(game_name)
         self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
-        self.memory_size = 10000 # 10000000
-        self.memory = experienceReplay(self.memory_size, self.game.get_screen_dims(), self.num_actions)
+        self.memory_size = 10000000
+        self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
         self.primary_network = DQN(self.num_actions)
@@ -40,6 +43,8 @@ class Agent():
         self.target_network.load_state_dict(self.primary_network.state_dict())
         self.target_network.eval()
         
+        #Loss function
+        self.loss_func = torch.nn.MSELoss()
         
         #Optimiser
         self.momentum = 0.95
@@ -64,11 +69,11 @@ class Agent():
         epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
         if random.random() < epsilon:
             #exploration
-            return nn.tensor(np.random.choice(np.arange(self.num_actions)))
+            return torch.tensor(np.random.choice(np.arange(self.num_actions)))
         else:
             #exploitation
-            #use target_network to estimate q-values of actions
-            return nn.argmax(self.target_network(state))
+            #use primary_network to estimate q-values of actions
+            return torch.argmax(self.primary_network(state.unsqueeze(0)))
         
     
     def batch_train(self):
@@ -79,31 +84,39 @@ class Agent():
             Loss funtion used is Mean Squared Error.
             Uses RMSprop for gradient based optimisation.
         """
-        if(self.memory.number_of_experiences() < batch_size):
+        if(self.memory.number_of_experiences() < self.batch_size):
             #Not enough experiences for batch training
             return
         
         #Sample batch from replay memory
-        batch_states, batch_actions, batch_rewards, batch_next_states, done = self.memory.selectBatch(self.batch_size)
+        batch_data = self.memory.selectBatch(self.batch_size)
+        batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
         
-        batch_states = nn.from_numpy(batch_states).type(nn.float32)
-        batch_actions = nn.from_numpy(batch_actions).type(nn.float32)
-        batch_rewards = nn.from_numpy(batch_rewards).type(nn.float32)
-        batch_next_states = nn.from_numpy(batch_next_state).type(nn.float32)
-        not_done = nn.from_numpy(1 - done).type(nn.int32)
-        
+        batch_states = torch.stack(batch_states, dim=0)
+        batch_next_states = torch.stack(batch_next_states, dim=0)
+        batch_actions = torch.tensor(batch_actions)
+        batch_rewards = torch.tensor(batch_rewards)
+        not_done = ~torch.tensor(done)
+        # batch_states = torch.from_numpy(batch_states).type(torch.float32)
+        # batch_actions = torch.from_numpy(batch_actions).type(torch.int32)
+        # batch_rewards = torch.from_numpy(batch_rewards).type(torch.float32)
+        # batch_next_states = torch.from_numpy(batch_next_state).type(torch.float32)
+        # not_done = torch.from_numpy(1 - done).type(torch.int32)
+
         Q_t_values = self.target_network(batch_states)[:, batch_actions]
-        
-        next_Q_t_primary_values = not_done * self.target_network(batch_next_states)
-        next_Q_t_target_values = not_done * self.target_network(batch_next_states)
-        
-        next_Q_t_values_max = next_Q_t_target_values[:, np.argmax(next_Q_t_primary_values, axis=0)]
+
+        # next_Q_t_primary_values = not_done * self.primary_network(batch_next_states)
+        # next_Q_t_target_values = not_done * self.target_network(batch_next_states)
+        next_Q_t_primary_values = self.primary_network(batch_next_states)
+        next_Q_t_target_values = self.target_network(batch_next_states)
+
+        next_Q_t_values_max = next_Q_t_target_values[:, torch.argmax(next_Q_t_primary_values, axis=1)]
         
         #Double Q-Learning
         expected_Q_values = batch_rewards + (self.discount * next_Q_t_values_max)
         
         #Calulating loss
-        loss = np.mean(np.square(Q_t_values - expected_Q_values))
+        loss = self.loss_func(Q_t_values, expected_Q_values)
         
         #Clear gradients from last backward pass
         self.optimizer.zero_grad()
@@ -138,22 +151,24 @@ class Agent():
                 else:
                     next_state = None
                 
-                # Convert everything to one format (CPU PyTorch Tensor)
+                # Convert all arrays to CPU Torch tensor
                 state = state.cpu()
-                next_state = next_state.cpu()
+                if not done:
+                    next_state = next_state.cpu()
                 action = action.cpu()
-                reward = nn.tensor(reward)
-                done = nn.tensor(done)
+                # reward = torch.tensor(reward)  # 'reward' is left as float
+                # done = torch.tensor(done)  # 'done' is left as boolean
 
                 #Store experiences in replay memory for batch training
-                self.memory.storeExperience(state, action, reward, next_state, done)
+                if not done:
+                    self.memory.storeExperience(state, action, reward, next_state, done)
                 
-                if(done):
-                        #Batch Train from experiences if final state is reached
-                        self.batch_train()
-                        record_rewards.append(total_reward)
-                        total_reward = 0
-                        break
+                if done:
+                    #Batch Train from experiences if final state is reached
+                    self.batch_train()
+                    record_rewards.append(total_reward)
+                    total_reward = 0
+                    break
                         
                 #next state assigned to current state
                 state = next_state
