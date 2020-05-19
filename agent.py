@@ -24,10 +24,11 @@ class Agent():
         self.eps_decay = 1000000
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 10000
+        self.max_episodes = 10 # 10000
         
         #Device
-        self.device = device
+        self.device = torch.device(device)
+        print('Using device: ', device)
 
         #Game
         self.game = Game(game_name)
@@ -38,8 +39,8 @@ class Agent():
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
-        self.primary_network = DQN(self.num_actions)
-        self.target_network = DQN(self.num_actions)
+        self.primary_network = DQN(self.num_actions).to(self.device)
+        self.target_network = DQN(self.num_actions).to(self.device)
         self.target_network.load_state_dict(self.primary_network.state_dict())
         self.target_network.eval()
         
@@ -73,6 +74,7 @@ class Agent():
         else:
             #exploitation
             #use primary_network to estimate q-values of actions
+            state = state.to(self.device)
             return torch.argmax(self.primary_network(state.unsqueeze(0)))
         
     
@@ -92,16 +94,16 @@ class Agent():
         batch_data = self.memory.selectBatch(self.batch_size)
         batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
         
-        batch_states = torch.stack(batch_states, dim=0)
-        batch_next_states = torch.stack(batch_next_states, dim=0)
-        batch_actions = torch.tensor(batch_actions)
-        batch_rewards = torch.tensor(batch_rewards)
-        not_done = ~torch.tensor(done)
+        batch_states = torch.stack(batch_states, dim=0).to(self.device)
+        batch_next_states = torch.stack(batch_next_states, dim=0).to(self.device)
+        batch_actions = torch.tensor(batch_actions).to(self.device)
+        batch_rewards = torch.tensor(batch_rewards).to(self.device)
+        not_done = ~torch.tensor(done).to(self.device)
         
         Q_t_values = self.target_network(batch_states)[:, batch_actions]
 
-        next_Q_t_primary_values = not_done * self.primary_network(batch_next_states)
-        next_Q_t_target_values = not_done * self.target_network(batch_next_states)
+        next_Q_t_primary_values = not_done.unsqueeze(1) * self.primary_network(batch_next_states)
+        next_Q_t_target_values = not_done.unsqueeze(1) * self.target_network(batch_next_states)
         
         next_Q_t_values_max = next_Q_t_target_values[:, torch.argmax(next_Q_t_primary_values, axis=1)]
         
@@ -126,6 +128,7 @@ class Agent():
         total_reward = 0
         record_rewards = []
         for i in range(self.max_episodes):
+            print("Episode ", i)
             self.game.reset_env()
             state = self.game.get_input()
             for j in count():
@@ -147,15 +150,13 @@ class Agent():
                 
                 # Convert all arrays to CPU Torch tensor
                 state = state.cpu()
-                if not done:
-                    next_state = next_state.cpu()
+                next_state = next_state.cpu()
                 action = action.cpu()
                 # reward = torch.tensor(reward)  # 'reward' is left as float
                 # done = torch.tensor(done)  # 'done' is left as boolean
 
                 #Store experiences in replay memory for batch training
-                if not done:
-                    self.memory.storeExperience(state, action, reward, next_state, done)
+                self.memory.storeExperience(state, action, reward, next_state, done)
                 
                 if done:
                     #Batch Train from experiences if final state is reached
