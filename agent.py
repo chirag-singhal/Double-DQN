@@ -24,7 +24,7 @@ class Agent():
         self.eps_decay = 1000000
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 10 # 10000
+        self.max_episodes = 1000 # 10000
         
         #Device
         self.device = torch.device(device)
@@ -98,7 +98,7 @@ class Agent():
         batch_next_states = torch.stack(batch_next_states, dim=0).to(self.device)
         batch_actions = torch.tensor(batch_actions).to(self.device)
         batch_rewards = torch.tensor(batch_rewards).to(self.device)
-        not_done = ~torch.tensor(done).to(self.device)
+        not_done = (~torch.tensor(done)).to(self.device)
         
         Q_t_values = self.target_network(batch_states)[:, batch_actions]
 
@@ -121,12 +121,33 @@ class Agent():
         
         #Update weights from calculated gradients
         self.optimizer.step()
+
+        loss_item = loss.detach().item()
+
+        #Delete GPU tensors to free up GPU memory
+        del batch_states
+        del batch_next_states
+        del batch_actions
+        del batch_rewards
+        del not_done
+        del Q_t_values
+        del next_Q_t_primary_values
+        del next_Q_t_target_values
+        del next_Q_t_values_max
+        del expected_Q_values
+        del loss
+        torch.cuda.empty_cache()
+        # print(torch.cuda.memory_allocated(device=self.device))
+
+        return loss_item
         
         
     def train(self):
         steps = 0
         total_reward = 0
         record_rewards = []
+        record_losses = []
+        record_steps = []
         for i in range(self.max_episodes):
             print("Episode ", i)
             self.game.reset_env()
@@ -160,7 +181,9 @@ class Agent():
                 
                 if done:
                     #Batch Train from experiences if final state is reached
-                    self.batch_train()
+                    loss = self.batch_train()
+                    record_steps.append(steps)
+                    record_losses.append(loss)
                     record_rewards.append(total_reward)
                     total_reward = 0
                     break
@@ -180,6 +203,6 @@ class Agent():
             if(steps == self.num_steps):
                 break
                 
-        return record_rewards
+        return record_rewards, record_losses, record_steps
                 
                 
