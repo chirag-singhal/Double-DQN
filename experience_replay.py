@@ -8,10 +8,10 @@ class experienceReplay(object):
     experience = c.namedtuple('experience', 'state, action, reward, next_state, is_done')
 
     def __init__(self, max_size):
-        self.size = max_size
-        self.count = 0
-        self.store = c.deque([]);
-        self.store1 = c.deque();
+        # self.size = max_size
+        # self.count = 0
+        self.store = c.deque([], max_size);
+        # self.store1 = c.deque();
         """
         State, action, reward and next state are stored in memory
         to train the network. 
@@ -43,20 +43,17 @@ class experienceReplay(object):
         """
         t = experienceReplay.experience(state, action, reward, next_state, is_done)
         self.store.append(t)
-        self.count += 1
+        # self.count += 1
 
     def selectBatch(self, batch_size):
         """
         A random batch of size batch_size is chosen from amongst the
         stored experiences to train the primary network.
         """
-        max_mem = min(self.count, self.size)
+        # max_mem = min(self.count, self.size)
         
         #batch has the random indices selected from max_mem
-        # NOTE:
-        # For now, there is a bug in the implementation that newer memories
-        # (memories after max_size) never get used
-        batch = random.sample(range(max_mem), batch_size)
+        batch = random.sample(self.store, batch_size)
         """
         states = self.state_memory[batch]
         actions = self.action_memory[batch]
@@ -67,16 +64,18 @@ class experienceReplay(object):
         return states, actions, rewards, next_state, terminal
         """
 
-        self.store1.clear()
-        for i in range(batch_size):
-            t = self.store[batch[i]]
-            self.store1.append(t)
-        return self.store1
+        # self.store1.clear()
+        # for i in range(batch_size):
+        #     t = self.store[batch[i]]
+        #     self.store1.append(t)
+        # return self.store1
+        return batch
     
     def number_of_experiences(self):
         #Returns total number of experiences stored in memory
-        if(self.count >= self.size):
-            return self.size
-        else:
-            return self.count
+        # if(self.count >= self.size):
+        #     return self.size
+        # else:
+        #     return self.count
+        return len(self.store)
         

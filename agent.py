@@ -35,7 +35,7 @@ class Agent():
         self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
-        self.memory_size = 10000000
+        self.memory_size = 10000 # 10000000
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
