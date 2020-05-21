@@ -70,12 +70,12 @@ class Agent():
         epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
         if random.random() < epsilon:
             #exploration
-            return torch.tensor(np.random.choice(np.arange(self.num_actions)))
+            return np.random.choice(np.arange(self.num_actions))
         else:
             #exploitation
             #use primary_network to estimate q-values of actions
-            state = state.to(self.device)
-            return torch.argmax(self.primary_network(state.unsqueeze(0)))
+            state = torch.as_tensor(state).to(self.device)
+            return torch.argmax(self.primary_network(state.unsqueeze(0))).detach().cpu().numpy()
         
     
     def batch_train(self):
@@ -93,22 +93,22 @@ class Agent():
         #Sample batch from replay memory
         batch_data = self.memory.selectBatch(self.batch_size)
         batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
-        
-        batch_states = torch.stack(batch_states, dim=0).to(self.device)
-        batch_next_states = torch.stack(batch_next_states, dim=0).to(self.device)
-        batch_actions = torch.tensor(batch_actions).to(self.device)
-        batch_rewards = torch.tensor(batch_rewards).to(self.device)
-        not_done = (~torch.tensor(done)).to(self.device)
-        
-        Q_t_values = self.target_network(batch_states)[:, batch_actions]
 
-        next_Q_t_primary_values = not_done.unsqueeze(1) * self.primary_network(batch_next_states)
-        next_Q_t_target_values = not_done.unsqueeze(1) * self.target_network(batch_next_states)
+        batch_states = torch.as_tensor(np.stack(batch_states, axis=0)).to(self.device)
+        batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0)).to(self.device)
+        batch_actions = torch.as_tensor(np.stack(batch_actions)).to(self.device)
+        batch_rewards = torch.tensor(batch_rewards).to(self.device)
+        not_done = (~torch.tensor(done).unsqueeze(1)).to(self.device)
         
-        next_Q_t_values_max = next_Q_t_target_values[:, torch.argmax(next_Q_t_primary_values, axis=1)]
+        Q_t_values = self.primary_network(batch_states).gather(1, batch_actions.unsqueeze(1)).squeeze()
+        
+        next_Q_t_primary_values = self.primary_network(batch_next_states).detach()
+        next_Q_t_target_values = not_done * self.target_network(batch_next_states).detach()
+        
+        next_Q_t_values_max = next_Q_t_target_values.gather(1, torch.argmax(next_Q_t_primary_values, dim=1).unsqueeze(1)).detach().squeeze()
         
         #Double Q-Learning
-        expected_Q_values = batch_rewards + (self.discount * next_Q_t_values_max)
+        expected_Q_values = (batch_rewards + (self.discount * next_Q_t_values_max))
         
         #Calulating loss
         loss = self.loss_func(Q_t_values, expected_Q_values)
@@ -136,8 +136,9 @@ class Agent():
         del next_Q_t_values_max
         del expected_Q_values
         del loss
-        torch.cuda.empty_cache()
-        # print(torch.cuda.memory_allocated(device=self.device))
+        # if self.device.type == 'cuda':
+        #     torch.cuda.empty_cache()
+        #     # print(torch.cuda.memory_allocated(device=self.device))
 
         return loss_item
         
@@ -169,10 +170,10 @@ class Agent():
                 #     next_state = None
                 next_state = self.game.get_input()
                 
-                # Convert all arrays to CPU Torch tensor
-                state = state.cpu()
-                next_state = next_state.cpu()
-                action = action.cpu()
+                # # Convert all arrays to CPU Torch tensor
+                # state = state.cpu()
+                # next_state = next_state.cpu()
+                # action = action.cpu()
                 # reward = torch.tensor(reward)  # 'reward' is left as float
                 # done = torch.tensor(done)  # 'done' is left as boolean
 
@@ -187,14 +188,21 @@ class Agent():
                     record_rewards.append(total_reward)
                     total_reward = 0
                     break
+
+                loss = self.batch_train()
+                # record_steps.append(steps)
+                # record_losses.append(loss)
+                # record_rewards.append(total_reward)
+                
                         
                 #next state assigned to current state
                 state = next_state
                 
                 if(steps % self.target_update == 0):
                     #Update the target_network
-                    self.target_network.load_state_dict(self.primary_network.state_dict())
-                    self.target_network.eval()
+                    with torch.no_grad():
+                        self.target_network.load_state_dict(self.primary_network.state_dict())
+                        self.target_network.eval()
                 
                 if(steps == self.num_steps):
                     print("Training Done\n")

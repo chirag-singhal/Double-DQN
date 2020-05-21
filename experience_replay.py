@@ -66,6 +66,8 @@ class experienceReplay(object):
 
         return states, actions, rewards, next_state, terminal
         """
+
+        self.store1.clear()
         for i in range(batch_size):
             t = self.store[batch[i]]
             self.store1.append(t)
