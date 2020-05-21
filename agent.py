@@ -57,6 +57,14 @@ class Agent():
         self.optimizer.zero_grad()
         
         
+    def sanity_check_screen(self):
+        #Returns the opening screen of game for sanity checks
+        #The opening screen should be 84x84 grayscaled image
+        self.game.reset_env()
+        state = self.game.get_screen()
+        return state
+
+
     def select_action(self, steps, state):
         """
             Selects next action to perform using greedy policy. Target network is used to 
@@ -94,16 +102,19 @@ class Agent():
         batch_data = self.memory.selectBatch(self.batch_size)
         batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
 
+        #Convert the batch information into PyTorch tensors
         batch_states = torch.as_tensor(np.stack(batch_states, axis=0)).to(self.device)
         batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0)).to(self.device)
         batch_actions = torch.as_tensor(np.stack(batch_actions)).to(self.device)
         batch_rewards = torch.tensor(batch_rewards).to(self.device)
         not_done = (~torch.tensor(done).unsqueeze(1)).to(self.device)
         
+        #Prediction
         Q_t_values = self.primary_network(batch_states).gather(1, batch_actions.unsqueeze(1)).squeeze()
         
-        next_Q_t_primary_values = self.primary_network(batch_next_states).detach()
-        next_Q_t_target_values = not_done * self.target_network(batch_next_states).detach()
+        #Ground-truth
+        next_Q_t_primary_values = self.primary_network(batch_next_states)
+        next_Q_t_target_values = not_done * self.target_network(batch_next_states)
         
         next_Q_t_values_max = next_Q_t_target_values.gather(1, torch.argmax(next_Q_t_primary_values, dim=1).unsqueeze(1)).detach().squeeze()
         
@@ -122,37 +133,27 @@ class Agent():
         #Update weights from calculated gradients
         self.optimizer.step()
 
-        loss_item = loss.detach().item()
-
-        #Delete GPU tensors to free up GPU memory
-        del batch_states
-        del batch_next_states
-        del batch_actions
-        del batch_rewards
-        del not_done
-        del Q_t_values
-        del next_Q_t_primary_values
-        del next_Q_t_target_values
-        del next_Q_t_values_max
-        del expected_Q_values
-        del loss
-        # if self.device.type == 'cuda':
-        #     torch.cuda.empty_cache()
-        #     # print(torch.cuda.memory_allocated(device=self.device))
-
-        return loss_item
+        return loss.detach().item()
         
         
     def train(self):
         steps = 0
-        total_reward = 0
-        record_rewards = []
-        record_losses = []
-        record_steps = []
+
+        metrics = {
+            'rewards': [],
+            'losses': [],
+            'steps': []
+        }
+        
         for i in range(self.max_episodes):
+            
             print("Episode ", i)
+            
+            total_reward = 0
+            
             self.game.reset_env()
             state = self.game.get_input()
+
             for j in count():
                 #Update counters
                 steps += 1
@@ -163,54 +164,40 @@ class Agent():
                 
                 total_reward += reward
                 
-                # if not done:
-                #         #get the next state
-                #         next_state = self.game.get_input()
-                # else:
-                #     next_state = None
+                if done:
+                    #Reset game screen if terminal state reached
+                    self.game.reset()
+                
                 next_state = self.game.get_input()
                 
-                # # Convert all arrays to CPU Torch tensor
-                # state = state.cpu()
-                # next_state = next_state.cpu()
-                # action = action.cpu()
-                # reward = torch.tensor(reward)  # 'reward' is left as float
-                # done = torch.tensor(done)  # 'done' is left as boolean
-
                 #Store experiences in replay memory for batch training
                 self.memory.storeExperience(state, action, reward, next_state, done)
                 
-                if done:
-                    #Batch Train from experiences if final state is reached
-                    loss = self.batch_train()
-                    record_steps.append(steps)
-                    record_losses.append(loss)
-                    record_rewards.append(total_reward)
-                    total_reward = 0
-                    break
-
                 loss = self.batch_train()
-                # record_steps.append(steps)
-                # record_losses.append(loss)
-                # record_rewards.append(total_reward)
+
+                if done:
+                    #Record the metrics after an episode
+                    metrics['steps'].append(steps)
+                    metrics['losses'].append(loss)
+                    metrics['rewards'].append(total_reward)
+                    break
                 
-                        
                 #next state assigned to current state
                 state = next_state
                 
-                if(steps % self.target_update == 0):
+                if steps % self.target_update == 0:
                     #Update the target_network
                     with torch.no_grad():
                         self.target_network.load_state_dict(self.primary_network.state_dict())
                         self.target_network.eval()
                 
-                if(steps == self.num_steps):
+                if steps == self.num_steps:
                     print("Training Done\n")
                     break
             
-            if(steps == self.num_steps):
+            if steps == self.num_steps:
                 break
                 
-        return record_rewards, record_losses, record_steps
+        return metrics
                 
                 

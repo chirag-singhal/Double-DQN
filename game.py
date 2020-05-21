@@ -50,34 +50,41 @@ class Game():
     def step(self, action):
         reward = 0
         done = False
-        for step in range(self.frameskip):
-            _, _reward, done, _ = self.envWrapped.step(action)
+        
+        # simulate frameskips
+        for _ in range(self.frameskip):
+            _, _r, _d, _ = self.envWrapped.step(action)
             self.buffer.append(self.get_screen())
-            reward += _reward
-            if done:
-                break
+
+            # reward is clipped between -1 and 1
+            _r = np.clip(_r, -1.0, 1.0)
+            reward += _r
+            done = done or _d
+        
         return reward, done
 
 
-# Actions in OpenAI Gym ALE
-# -------------------------
-# ACTION_MEANING = {
-#     0: "NOOP",
-#     1: "FIRE",
-#     2: "UP",
-#     3: "RIGHT",
-#     4: "LEFT",
-#     5: "DOWN",
-#     6: "UPRIGHT",
-#     7: "UPLEFT",
-#     8: "DOWNRIGHT",
-#     9: "DOWNLEFT",
-#     10: "UPFIRE",
-#     11: "RIGHTFIRE",
-#     12: "LEFTFIRE",
-#     13: "DOWNFIRE",
-#     14: "UPRIGHTFIRE",
-#     15: "UPLEFTFIRE",
-#     16: "DOWNRIGHTFIRE",
-#     17: "DOWNLEFTFIRE",
-# }
+"""
+Actions in OpenAI Gym ALE
+-------------------------
+ACTION_MEANING = {
+    0: "NOOP",
+    1: "FIRE",
+    2: "UP",
+    3: "RIGHT",
+    4: "LEFT",
+    5: "DOWN",
+    6: "UPRIGHT",
+    7: "UPLEFT",
+    8: "DOWNRIGHT",
+    9: "DOWNLEFT",
+    10: "UPFIRE",
+    11: "RIGHTFIRE",
+    12: "LEFTFIRE",
+    13: "DOWNFIRE",
+    14: "UPRIGHTFIRE",
+    15: "UPLEFTFIRE",
+    16: "DOWNRIGHTFIRE",
+    17: "DOWNLEFTFIRE",
+}
+"""
