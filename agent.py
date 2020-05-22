@@ -24,7 +24,7 @@ class Agent():
         self.eps_decay = 1000000
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 1000 # 10000
+        self.max_episodes = 100 # 10000
         
         #Device
         self.device = torch.device(device)
@@ -166,7 +166,7 @@ class Agent():
                 
                 if done:
                     #Reset game screen if terminal state reached
-                    self.game.reset()
+                    self.game.reset_env()
                 
                 next_state = self.game.get_input()
                 
