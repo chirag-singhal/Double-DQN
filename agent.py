@@ -13,7 +13,7 @@ from dqn import DQN
 
 class Agent():
     
-    def __init__(self, game_name, device='cpu'):
+    def __init__(self, game_name, device='cpu', chkpnt_path=None):
         
         #Set hyperparameters
         self.discount = 0.99
@@ -21,10 +21,16 @@ class Agent():
         self.batch_size = 32
         self.eps_start = 1
         self.eps_end = 0.1
-        self.eps_decay = 1000000
+        self.eps_decay = 200000 # 1000000
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 100 # 10000
+        self.max_episodes = 10000
+        self.episodes_per_chkpnt = 50
+        
+        #Model Checkpointing
+        if chkpnt_path == None:
+            chkpnt_path = './models/' + game_name + '_' + str(self.max_episodes) + '.pth'    
+        self.chkpnt_path = chkpnt_path
         
         #Device
         self.device = torch.device(device)
@@ -35,7 +41,7 @@ class Agent():
         self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
-        self.memory_size = 10000 # 10000000
+        self.memory_size = 15000 # 10000000
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
@@ -75,7 +81,7 @@ class Agent():
                 state - Current state of atari game, contains last 4 frames. 
         """
         #linear decay of epsilon value
-        epsilon = self.eps_start + (self.eps_end - self.eps_start) * (steps / self.eps_decay)
+        epsilon = self.eps_start + (self.eps_end - self.eps_start) * (min(steps, self.eps_decay) / self.eps_decay)
         if random.random() < epsilon:
             #exploration
             return np.random.choice(np.arange(self.num_actions))
@@ -130,8 +136,32 @@ class Agent():
         #Run backward pass and calculate gradients
         loss.backward()
         
+        #Clip gradients between -1 and 1
+        for param in self.primary_network.parameters():
+            param.grad.data.clamp_(-1, 1)
+
         #Update weights from calculated gradients
         self.optimizer.step()
+
+        # # DEBUG
+        # if loss.detach().item() in [0.03125, 0]:
+        #     import matplotlib.pyplot as plt
+        #     plt.imshow(batch_states[0][0].cpu().numpy())
+        #     plt.plot()
+        #     plt.savefig('tmp_img.png')
+        #     print('BATCH_ACTION: ', batch_actions)
+        #     print('BATCH_REWARD: ', batch_rewards)
+        #     print('LOSS: ', loss.detach().item())
+        #     print('PRIMARY: ', self.primary_network(batch_states).detach())
+        #     print('Q: ', Q_t_values)
+        #     print('T: ', expected_Q_values)
+            
+        #     for name, param in self.primary_network.named_parameters():
+        #         if param.requires_grad:
+        #             print(name, param.data)
+        #     print('\n')
+        #     input()
+        # # DEBUG
 
         return loss.detach().item()
         
@@ -142,13 +172,16 @@ class Agent():
         metrics = {
             'rewards': [],
             'losses': [],
-            'steps': []
+            'steps': [],
+            'cum_steps': []
         }
         
         for i in range(self.max_episodes):
             
-            print("Episode ", i)
+            print('\n', '-'*40)
+            print('Episode ', i)
             
+            steps_delta = 0
             total_reward = 0
             
             self.game.reset_env()
@@ -157,6 +190,7 @@ class Agent():
             for j in count():
                 #Update counters
                 steps += 1
+                steps_delta += 1
                 
                 #Select action using greedy policy
                 action = self.select_action(steps, state)
@@ -175,9 +209,22 @@ class Agent():
                 
                 loss = self.batch_train()
 
+                # # DEBUG
+                # if steps_delta % 100 == 0:
+                #     print('ACTION: ', action)
+                #     print('REWARD: ', reward)
+                #     print('LOSS: ', loss)
+                #     print('\n')
+                # # DEBUG
+
                 if done:
+                    print('Steps taken: ', steps_delta)
+                    print('Cumulative Steps taken: ', steps)
+                    print('Loss: ', loss)
+                    print('Reward: ', total_reward)
                     #Record the metrics after an episode
-                    metrics['steps'].append(steps)
+                    metrics['steps'].append(steps_delta)
+                    metrics['cum_steps'].append(steps)
                     metrics['losses'].append(loss)
                     metrics['rewards'].append(total_reward)
                     break
@@ -195,9 +242,16 @@ class Agent():
                     print("Training Done\n")
                     break
             
+            #Model checkpointing
+            if i % self.episodes_per_chkpnt == 0:
+                torch.save(self.primary_network.state_dict(), self.chkpnt_path)
+            
             if steps == self.num_steps:
-                break
-                
+                return metrics
+
+        #Save final trained model
+        torch.save(self.primary_network.state_dict(), self.chkpnt_path)
+
         return metrics
                 
                 

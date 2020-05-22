@@ -1,4 +1,5 @@
 models/
 __pycache__/
+__pycache__/*
 
 tmp_img.png

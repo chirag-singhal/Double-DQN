@@ -23,6 +23,10 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(4, 32, kernel_size = 8, stride = 4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size = 4, stride = 2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size = 3, stride = 1)
+
+        nn.init.kaiming_normal_(self.conv1.weight, nonlinearity='relu')
+        nn.init.kaiming_normal_(self.conv2.weight, nonlinearity='relu')
+        nn.init.kaiming_normal_(self.conv3.weight, nonlinearity='relu')
         
         def conv_2d_size_output(size, kernel_size, stride):
             return (size - kernel_size) // stride + 1
@@ -38,6 +42,9 @@ class DQN(nn.Module):
         
         self.fc4 = nn.Linear(self.linear_input_size, 512)
         self.fc5 = nn.Linear(512, outputs)
+
+        nn.init.kaiming_normal_(self.fc4.weight, nonlinearity='relu')
+        nn.init.kaiming_normal_(self.fc5.weight, nonlinearity='relu')
         
     def forward(self, x):
         """
@@ -55,7 +62,7 @@ class DQN(nn.Module):
         x = x.view(-1, self.linear_input_size)
         
         x = F.relu(self.fc4(x))
-        x = F.relu(self.fc5(x))
+        x = self.fc5(x)
         
         return x
         
