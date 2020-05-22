@@ -1,0 +1,4 @@
+./models/*
+tmp_img.png
+
+__pycache__/*
