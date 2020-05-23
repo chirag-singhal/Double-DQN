@@ -26,9 +26,9 @@ class Agent():
         self.primary_update = 4
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 1000 # 10000
+        self.max_episodes = 100 # 10000
         self.episodes_per_chkpnt = 50
-        self.evaluation_steps = 1000000
+        self.evaluation_steps = 10000 # 1000000
         
         #Model Checkpointing
         if chkpnt_name == None:
@@ -57,8 +57,8 @@ class Agent():
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
-        self.primary_network = DQN(self.num_actions).to(self.device).double()
-        self.target_network = DQN(self.num_actions).to(self.device).double()
+        self.primary_network = DQN(self.num_actions).to(self.device).float()
+        self.target_network = DQN(self.num_actions).to(self.device).float()
         self.target_network.load_state_dict(self.primary_network.state_dict())
         self.target_network.eval()
         
@@ -79,8 +79,9 @@ class Agent():
             with open('models/' + pretrained_name + '.metrics', 'rb') as metrics_file:
                 self.metrics = pickle.load(metrics_file)
             self.primary_network.load_state_dict(torch.load('models/' + pretrained_name + '.pth'))
-            self.target_network.load_state_dict(self.primary_network.state_dict())
-            self.target_network.eval()
+            with torch.no_grad():
+                self.target_network.load_state_dict(self.primary_network.state_dict())
+                self.target_network.eval()
             print('Using pretrained model : ' + pretrained_name)
         
         
@@ -109,11 +110,11 @@ class Agent():
         else:
             #exploitation
             #use primary_network to estimate q-values of actions
-            state = torch.as_tensor(state, dtype=torch.double).to(self.device) / 255.
+            state = torch.as_tensor(state, dtype=torch.float).to(self.device) / 255.
             return torch.argmax(self.primary_network(state.unsqueeze(0))).detach().cpu().numpy()
         
     
-    def evaluate():
+    def evaluate(self):
         total_reward = 0
         done = False
 
@@ -121,7 +122,7 @@ class Agent():
 
         while not done:
             state = self.game.get_input()
-            action = self.select_action(steps, state)
+            action = self.select_action(self.eps_decay, state)
             reward, done = self.game.step(action)            
             total_reward += reward
 
@@ -145,10 +146,10 @@ class Agent():
         batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
 
         #Convert the batch information into PyTorch tensors
-        batch_states = torch.as_tensor(np.stack(batch_states, axis=0), dtype=torch.double).to(self.device) / 255.
-        batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0), dtype=torch.double).to(self.device) / 255.
+        batch_states = torch.as_tensor(np.stack(batch_states, axis=0), dtype=torch.float).to(self.device) / 255.
+        batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0), dtype=torch.float).to(self.device) / 255.
         batch_actions = torch.as_tensor(np.stack(batch_actions)).to(self.device)
-        batch_rewards = torch.tensor(batch_rewards).to(self.device)
+        batch_rewards = torch.tensor(batch_rewards, dtype=torch.float).to(self.device)
         not_done = (~torch.tensor(done).unsqueeze(1)).to(self.device)
         
         #Prediction
@@ -205,6 +206,7 @@ class Agent():
     def train(self):
 
         def save_model():
+            print('Saving model and metrics ...')
             torch.save(self.primary_network.state_dict(), self.chkpnt_path + '.pth')
             with open(self.chkpnt_path + '.metrics', 'wb') as metrics_file:
                 pickle.dump(self.metrics, metrics_file)
@@ -216,13 +218,12 @@ class Agent():
             print('\n', '-'*40)
             print('Episode ', i)
             
-            steps_delta = 0
             total_reward = 0
             
             self.game.reset_env()
             state = self.game.get_input()
 
-            for j in count():
+            for steps_delta in count():
                 #Update counters
                 steps += 1
                 steps_delta += 1
@@ -280,11 +281,11 @@ class Agent():
                     break
             
             #Model checkpointing
-            if i % self.episodes_per_chkpnt == 0:
+            if i % self.episodes_per_chkpnt == self.episodes_per_chkpnt-1:
                 save_model()
 
             #Model evaluation
-            if i % self.evaluation_steps == 0:
+            if steps % self.evaluation_steps == 0:
                 eval_reward = self.evaluate()
                 self.metrics['evaluation'].append((steps, eval_reward))
             
