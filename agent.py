@@ -14,7 +14,7 @@ from dqn import DQN
 
 class Agent():
     
-    def __init__(self, game_name, device='cpu', chkpnt_name=None, pretrained_name=None):
+    def __init__(self, game_name, device='cpu', chkpnt_name=None, pretrained_name=None, verbosity=0):
         
         #Set hyperparameters
         self.discount = 0.99
@@ -82,7 +82,14 @@ class Agent():
             with torch.no_grad():
                 self.target_network.load_state_dict(self.primary_network.state_dict())
                 self.target_network.eval()
-            print('Using pretrained model : ' + pretrained_name)
+            print('Using pretrained model: ' + pretrained_name)
+
+        #Verbosity
+        # 0 - No info
+        # 1 - Prints metrics per episode
+        # 2 - Prints training batch information (BLOCKS EXECUTION)
+        # 3 - Prints model weights and saves state plot (BLOCKS EXECUTION)
+        self.verbosity = verbosity
         
         
     def sanity_check_screen(self):
@@ -167,25 +174,27 @@ class Agent():
         #Calulating loss
         loss = self.loss_func(Q_t_values, expected_Q_values)
  
-        # # DEBUG
-        # if loss.detach().item() < 0.1:
-        #     import matplotlib.pyplot as plt
-        #     plt.imshow(batch_states[0][0].cpu().numpy())
-        #     plt.plot()
-        #     plt.savefig('tmp_img.png')
-        #     print('BATCH_ACTION: ', batch_actions)
-        #     print('BATCH_REWARD: ', batch_rewards)
-        #     print('LOSS: ', loss.detach().item())
-        #     print('PRIMARY: ', self.primary_network(batch_states).detach())
-        #     print('Q: ', Q_t_values)
-        #     print('T: ', expected_Q_values)
+        # DEBUG
+        if self.verbosity >= 2 and loss.detach().item() < 0.1:
+            print('BATCH_ACTION: ', batch_actions)
+            print('BATCH_REWARD: ', batch_rewards)
+            print('LOSS: ', loss.detach().item())
+            print('PRIMARY: ', self.primary_network(batch_states).detach())
+            print('Q: ', Q_t_values)
+            print('T: ', expected_Q_values)
             
-        #     for name, param in self.primary_network.named_parameters():
-        #         if param.requires_grad:
-        #             print(name, param.data)
-        #     print('\n')
-        #     input()
-        # # DEBUG
+            if self.verbosity >= 3:
+                import matplotlib.pyplot as plt
+                plt.imshow(batch_states[0][0].cpu().numpy())
+                plt.plot()
+                plt.savefig('tmp_img.png')
+                
+                for name, param in self.primary_network.named_parameters():
+                    if param.requires_grad:
+                        print(name, param.data)
+            print('\n')
+            input()
+        # DEBUG
 
         #Clear gradients from last backward pass
         self.optimizer.zero_grad()
@@ -215,7 +224,8 @@ class Agent():
         
         for i in range(self.max_episodes):
             
-            print('\n', '-'*40)
+            if self.verbosity >= 1:
+                print('\n', '-'*40)
             print('Episode ', i)
             
             total_reward = 0
@@ -247,26 +257,6 @@ class Agent():
                 if steps % self.primary_update == 0:
                     loss = self.batch_train()
 
-                # # DEBUG
-                # if steps_delta % 100 == 0:
-                #     print('ACTION: ', action)
-                #     print('REWARD: ', reward)
-                #     print('LOSS: ', loss)
-                #     print('\n')
-                # # DEBUG
-
-                if done:
-                    print('Steps taken: ', steps_delta)
-                    print('Cumulative Steps taken: ', steps)
-                    print('Loss: ', loss)
-                    print('Reward: ', total_reward)
-                    #Record the metrics after an episode
-                    self.metrics['steps'].append(steps_delta)
-                    self.metrics['cum_steps'].append(steps)
-                    self.metrics['losses'].append(loss)
-                    self.metrics['rewards'].append(total_reward)
-                    break
-                
                 #next state assigned to current state
                 state = next_state
                 
@@ -276,6 +266,19 @@ class Agent():
                         self.target_network.load_state_dict(self.primary_network.state_dict())
                         self.target_network.eval()
                 
+                if done:
+                    if self.verbosity >= 1:
+                        print('Steps taken: ', steps_delta)
+                        print('Cumulative Steps taken: ', steps)
+                        print('Loss: ', loss)
+                        print('Reward: ', total_reward)
+                    #Record the metrics after an episode
+                    self.metrics['steps'].append(steps_delta)
+                    self.metrics['cum_steps'].append(steps)
+                    self.metrics['losses'].append(loss)
+                    self.metrics['rewards'].append(total_reward)
+                    break
+                                
                 if steps == self.num_steps:
                     print("Training Done\n")
                     break
@@ -287,6 +290,8 @@ class Agent():
             #Model evaluation
             if steps % self.evaluation_steps == 0:
                 eval_reward = self.evaluate()
+                if self.verbosity >= 1:
+                    print('Evaluation reward: ', eval_reward)
                 self.metrics['evaluation'].append((steps, eval_reward))
             
             #Maximum training steps reached
