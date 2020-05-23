@@ -44,7 +44,6 @@ class DQN(nn.Module):
         self.fc5 = nn.Linear(512, outputs)
 
         nn.init.kaiming_normal_(self.fc4.weight, nonlinearity='relu')
-        nn.init.kaiming_normal_(self.fc5.weight, nonlinearity='relu')
         
     def forward(self, x):
         """

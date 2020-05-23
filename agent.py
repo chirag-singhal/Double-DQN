@@ -1,5 +1,6 @@
 from itertools import count
 import random
+import pickle
 
 import numpy as np
 
@@ -13,7 +14,7 @@ from dqn import DQN
 
 class Agent():
     
-    def __init__(self, game_name, device='cpu', chkpnt_path=None):
+    def __init__(self, game_name, device='cpu', chkpnt_name=None, pretrained_name=None):
         
         #Set hyperparameters
         self.discount = 0.99
@@ -21,17 +22,28 @@ class Agent():
         self.batch_size = 32
         self.eps_start = 1
         self.eps_end = 0.1
-        self.eps_decay = 200000 # 1000000
+        self.eps_decay = 100000 # 1000000
+        self.primary_update = 4
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 10000
+        self.max_episodes = 1000 # 10000
         self.episodes_per_chkpnt = 50
+        self.evaluation_steps = 1000000
         
         #Model Checkpointing
-        if chkpnt_path == None:
-            chkpnt_path = './models/' + game_name + '_' + str(self.max_episodes) + '.pth'    
-        self.chkpnt_path = chkpnt_path
+        if chkpnt_name == None:
+            chkpnt_name = game_name + '_' + str(self.max_episodes)
+        self.chkpnt_path = 'models/' + chkpnt_name
         
+        #Metrics
+        self.metrics = {
+            'rewards': [],
+            'losses': [],
+            'steps': [],
+            'cum_steps': [],
+            'evaluation': []
+        }
+
         #Device
         self.device = torch.device(device)
         print('Using device: ', device)
@@ -45,8 +57,8 @@ class Agent():
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
-        self.primary_network = DQN(self.num_actions).to(self.device)
-        self.target_network = DQN(self.num_actions).to(self.device)
+        self.primary_network = DQN(self.num_actions).to(self.device).double()
+        self.target_network = DQN(self.num_actions).to(self.device).double()
         self.target_network.load_state_dict(self.primary_network.state_dict())
         self.target_network.eval()
         
@@ -61,6 +73,15 @@ class Agent():
                         )
         #clear gradients
         self.optimizer.zero_grad()
+
+        #Open pretrained model
+        if pretrained_name != None:
+            with open('models/' + pretrained_name + '.metrics', 'rb') as metrics_file:
+                self.metrics = pickle.load(metrics_file)
+            self.primary_network.load_state_dict(torch.load('models/' + pretrained_name + '.pth'))
+            self.target_network.load_state_dict(self.primary_network.state_dict())
+            self.target_network.eval()
+            print('Using pretrained model : ' + pretrained_name)
         
         
     def sanity_check_screen(self):
@@ -88,10 +109,25 @@ class Agent():
         else:
             #exploitation
             #use primary_network to estimate q-values of actions
-            state = torch.as_tensor(state).to(self.device)
+            state = torch.as_tensor(state, dtype=torch.double).to(self.device) / 255.
             return torch.argmax(self.primary_network(state.unsqueeze(0))).detach().cpu().numpy()
         
     
+    def evaluate():
+        total_reward = 0
+        done = False
+
+        self.game.reset_env()
+
+        while not done:
+            state = self.game.get_input()
+            action = self.select_action(steps, state)
+            reward, done = self.game.step(action)            
+            total_reward += reward
+
+        return total_reward
+
+
     def batch_train(self):
         """
             Performs batch training on the network. Implements Double Q learning on network. 
@@ -109,8 +145,8 @@ class Agent():
         batch_states, batch_actions, batch_rewards, batch_next_states, done = list(zip(*batch_data))
 
         #Convert the batch information into PyTorch tensors
-        batch_states = torch.as_tensor(np.stack(batch_states, axis=0)).to(self.device)
-        batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0)).to(self.device)
+        batch_states = torch.as_tensor(np.stack(batch_states, axis=0), dtype=torch.double).to(self.device) / 255.
+        batch_next_states = torch.as_tensor(np.stack(batch_next_states, axis=0), dtype=torch.double).to(self.device) / 255.
         batch_actions = torch.as_tensor(np.stack(batch_actions)).to(self.device)
         batch_rewards = torch.tensor(batch_rewards).to(self.device)
         not_done = (~torch.tensor(done).unsqueeze(1)).to(self.device)
@@ -129,22 +165,9 @@ class Agent():
         
         #Calulating loss
         loss = self.loss_func(Q_t_values, expected_Q_values)
-        
-        #Clear gradients from last backward pass
-        self.optimizer.zero_grad()
-        
-        #Run backward pass and calculate gradients
-        loss.backward()
-        
-        #Clip gradients between -1 and 1
-        for param in self.primary_network.parameters():
-            param.grad.data.clamp_(-1, 1)
-
-        #Update weights from calculated gradients
-        self.optimizer.step()
-
+ 
         # # DEBUG
-        # if loss.detach().item() in [0.03125, 0]:
+        # if loss.detach().item() < 0.1:
         #     import matplotlib.pyplot as plt
         #     plt.imshow(batch_states[0][0].cpu().numpy())
         #     plt.plot()
@@ -163,18 +186,30 @@ class Agent():
         #     input()
         # # DEBUG
 
+        #Clear gradients from last backward pass
+        self.optimizer.zero_grad()
+        
+        #Run backward pass and calculate gradients
+        loss.backward()
+        
+        # #Clip loss gradient between -1 and 1
+        # for param in self.primary_network.parameters():
+        #     param.grad.data.clamp_(-1, 1)
+
+        #Update weights from calculated gradients
+        self.optimizer.step()
+
         return loss.detach().item()
         
         
     def train(self):
-        steps = 0
 
-        metrics = {
-            'rewards': [],
-            'losses': [],
-            'steps': [],
-            'cum_steps': []
-        }
+        def save_model():
+            torch.save(self.primary_network.state_dict(), self.chkpnt_path + '.pth')
+            with open(self.chkpnt_path + '.metrics', 'wb') as metrics_file:
+                pickle.dump(self.metrics, metrics_file)
+
+        steps = 0
         
         for i in range(self.max_episodes):
             
@@ -207,7 +242,9 @@ class Agent():
                 #Store experiences in replay memory for batch training
                 self.memory.storeExperience(state, action, reward, next_state, done)
                 
-                loss = self.batch_train()
+                #Train primary network every k steps
+                if steps % self.primary_update == 0:
+                    loss = self.batch_train()
 
                 # # DEBUG
                 # if steps_delta % 100 == 0:
@@ -223,10 +260,10 @@ class Agent():
                     print('Loss: ', loss)
                     print('Reward: ', total_reward)
                     #Record the metrics after an episode
-                    metrics['steps'].append(steps_delta)
-                    metrics['cum_steps'].append(steps)
-                    metrics['losses'].append(loss)
-                    metrics['rewards'].append(total_reward)
+                    self.metrics['steps'].append(steps_delta)
+                    self.metrics['cum_steps'].append(steps)
+                    self.metrics['losses'].append(loss)
+                    self.metrics['rewards'].append(total_reward)
                     break
                 
                 #next state assigned to current state
@@ -244,14 +281,21 @@ class Agent():
             
             #Model checkpointing
             if i % self.episodes_per_chkpnt == 0:
-                torch.save(self.primary_network.state_dict(), self.chkpnt_path)
+                save_model()
+
+            #Model evaluation
+            if i % self.evaluation_steps == 0:
+                eval_reward = self.evaluate()
+                self.metrics['evaluation'].append((steps, eval_reward))
             
+            #Maximum training steps reached
             if steps == self.num_steps:
-                return metrics
+                save_model()
+                return self.metrics
 
         #Save final trained model
-        torch.save(self.primary_network.state_dict(), self.chkpnt_path)
+        save_model()
 
-        return metrics
+        return self.metrics
                 
                 
