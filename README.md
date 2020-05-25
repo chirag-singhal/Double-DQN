@@ -36,14 +36,13 @@ For this project, we have used a similar _Convolution Network_ as given in the r
 ***
 ### Challenging areas
 * Training the model has been one of the major areas of concern. Due to limited resources we could not train the agent for all the 49 games as mentioned in the paper.
-
-_-add frameskip and other things-
+* The paper was not very clear about how they performed frameskipping and frame stacking. Frameskipping was done for 4 frames, which means that every 4th frame from the environment was used for the model. The remaining 3 frames were discarded. This confusion was aggrevated by the fact that the experience replay they used used last 4 frames from the frames left after discarding. That is, 16 individual game frames are required to make the initial state (x<sub>0</sub>, x<sub>4</sub>, x<sub>8</sub>, x<sub>12</sub>), where 'x' is an individual raw frame from the environment. Now, to get the next state, we need 4 new individual frames (x<sub>4</sub>, x<sub>8</sub>, x<sub>12</sub>, x<sub>16</sub>). Subsequent states are overlapping. In other words, the newly appended frame in the buffer is obtained from 4 skipped frames (3 discarded, 1 used).
 
 ***
 ### Inferences Drawn
-<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball_intro.png">
+<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball.gif">
 
-Here we analyse the results for **VideoPinball**. The above is an image frame from the mentioned game. The results are more or less the same for other Atari 2600 games as well.
+Here we analyse the results for **VideoPinball**. The above is a gif of the mentioned game. The results are more or less the same for other Atari 2600 games as well.
 
 
 <img align="left" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball_avg_reward_dqn.png">
