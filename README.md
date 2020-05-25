@@ -2,6 +2,8 @@
 ## Hado van Hasselt and Arthur Guez and David Silver
 ### Google DeepMind
 The research paper can be found [here](https://arxiv.org/pdf/1509.06461.pdf).
+
+[Project Presentation](https://docs.google.com/presentation/d/1kvf9l-V-edFy2-0etdhaUm-no3hzw_Wi9TCw4hHcPDU/edit?usp=sharing)
 ***
 #### Goal of the project: To analyze the overestimations of DQN and show that Double DQN improves over DQN both in terms of value accuracy and in terms of policy quality.
 
@@ -92,6 +94,6 @@ Open up the terminal and type -
 
 Open up `train.ipynb` and `train-2.ipynb` to run the Breakout and VideoPinball respectively.
 
-Your trained weights and results (rewards and loss) are periodically saved in `./models` to avoid any trouble of running the whole experiment again. Check `agent.py` to know more about the change in initialisation of your.
+Your trained weights and results (rewards and loss) are periodically saved in `./models` to avoid any trouble of running the whole experiment again. Check `agent.py` to know more about the change in initialisation of your agent.
     
     Agent(game_name, device, chkpnt_name, pretrained_name, verbosity)
