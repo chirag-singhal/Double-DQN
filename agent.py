@@ -97,6 +97,7 @@ class Agent():
         #The opening screen should be 84x84 grayscaled image
         self.game.reset_env()
         state = self.game.get_screen()
+        print('Dimension of screen: ', state.shape)
         return state
 
 
@@ -121,13 +122,21 @@ class Agent():
             return torch.argmax(self.primary_network(state.unsqueeze(0))).detach().cpu().numpy()
         
     
-    def evaluate(self):
+    def evaluate(self, visualise=False):
         total_reward = 0
         done = False
 
         self.game.reset_env()
 
+        if visualise:
+            self.game.env.render()
+            input()
+            import time
+
         while not done:
+            if visualise:
+                self.game.env.render()
+                time.sleep(0.03)
             state = self.game.get_input()
             action = self.select_action(self.eps_decay, state)
             reward, done = self.game.step(action)            
