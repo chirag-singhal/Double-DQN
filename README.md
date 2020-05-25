@@ -41,9 +41,9 @@ _-add frameskip and other things-
 
 ***
 ### Inferences Drawn
-<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball_intro.png">
+<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball.gif">
 
-Here we analyse the results for **VideoPinball**. The above is an image frame from the mentioned game. The results are more or less the same for other Atari 2600 games as well.
+Here we analyse the results for **VideoPinball**. The above is a gif of the mentioned game. The results are more or less the same for other Atari 2600 games as well.
 
 
 <img align="left" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pinball_avg_reward_dqn.png">
