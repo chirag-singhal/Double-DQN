@@ -23,11 +23,22 @@ _(Gym is a toolkit for developing and comparing reinforcement learning algorithm
 * This way Double DQN produces more accurate value estimates and better learned policies.
 ***
 ### Network Architecture and Hyper-parameters used
+For this project, we have used a similar _Convolution Network_ as given in the research paper, details of which are as follows:
+* Input to the network is a 4x84x84 tensor containing a rescaled and grey scale version of the last four frames. The network consists of 3 convolutional layers followed by two fully connected layers.
+* The two fully connected layers, the hidden and the output layer, have a size of _512_ and the size of _number of actions_ respectively.
+* The first convolutional layer has 32 filters of size 8 (stride 4), second layer has 64 layers of size 4(stride 2) and the final convolutional layer has 64 filters of size 3 (stride 1).
+* All the layers, except the last one, are separated by ReLU.
+* The optmization technique used is RMSProp with momentum paameter set as 0.95
+* A discount factor of 0.99 and a batch size of 32 have been used.
+* For the epsilon-greedy policy, epsilon varies lineraly from 1 to 0.1 over 1,000,000 game steps.
+* However, we use a learning rate of 0.00001 for our purposes instead of 0.00025 as mentioned in the paper. Due to resource constraints, a buffer length of 15,000 steps has been used against the suggested value of 1M steps. 
+
 ***
 ### Challenging areas
-_-time taken for training-_
+* Training the model has been one of the major areas of concern. Due to limited resources we could not train the agent for all the 49 games as mentioned in the paper.
 
-_-adding some exploration during evaluation to provide additional randomization, else with unique starting points the agent could learn to remember the sequence of actions leading to a loss of generality-_
+_-add frameskip and other things-
+
 ***
 ### Inferences Drawn
 _-Insert images and graphs-_
