@@ -57,6 +57,13 @@ Here we analyse the results for **VideoPinball**. The above is a gif of the ment
 ***
 ### Code Deployment
 _-Prerequisites-_
+The project is guaranteed to work in the given environment (environment.yml). However, not every package in the environment file is needed to run the project.
+Following are the required packages to run the project:
+* Standard Python Libraries
+* numpy
+* matplotlib
+* pytorch
+* gym[atari]
 
 _-How to run the code-_
 ***
