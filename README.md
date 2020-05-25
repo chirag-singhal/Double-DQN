@@ -54,9 +54,20 @@ Here we analyse the results for **VideoPinball**. The above is a gif of the ment
 * Double Q-learning leads to more consistent results as compared to Q-learing. As we can see that average rewards are fluctuating in the case of DQN whereas they are more consistent in the case of Double-DQN.
 * This also shows that Double DQN not only leads to better rewards but also gives better learned policies. Thus, Double DQN is a significant improvement over DQN making minimalistic changes to the existing network architecture.
 
+Following is the gif for the game **Breakout**
+
+<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/breakout.gif">
+
+Graphs for DQN and Double DQN respectively for Breakout:
+
+<img align="left" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/breakout_avg_reward_dqn.png">
+<img align = "centre" src = "https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/breakout_avg_reward.png">
+
+Double DQN does not provide a significant improvement over DQN for breakout which is in agreement with the research paper. 
+Hence, we can conclude that Double DQN works better with the environments that provide late rewards.
+
 ***
 ### Code Deployment
-_-Prerequisites-_
 The project is guaranteed to work in the given environment (environment.yml). However, not every package in the environment file is needed to run the project.
 Following are the required packages to run the project:
 * Standard Python Libraries
