@@ -1,4 +1,4 @@
-name: pytorch
+name: double_dqn
 channels:
   - pytorch
   - defaults

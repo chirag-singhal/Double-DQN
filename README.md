@@ -73,8 +73,25 @@ Following are the required packages to run the project:
 * Standard Python Libraries
 * numpy
 * matplotlib
+* conda
 * pytorch
 * gym[atari]
 
-_-How to run the code-_
-***
+### How to run the code
+*Assuming you have a working copy of conda installed.*
+
+Open up the terminal and type - 
+
+
+    git clone https://github.com/chirag-singhal/Double-DQN.git
+    cd Double-DQN
+    mkdir models
+    conda env create -f environment.yml
+    conda activate double_dqn
+    jupyter notebook
+
+Open up `train.ipynb` and `train-2.ipynb` to run the Breakout and VideoPinball respectively.
+
+Your trained weights and results (rewards and loss) are periodically saved in `./models` to avoid any trouble of running the whole experiment again. Check `agent.py` to know more about the change in initialisation of your.
+    
+    Agent(game_name, device, chkpnt_name, pretrained_name, verbosity)
