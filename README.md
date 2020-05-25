@@ -36,8 +36,7 @@ For this project, we have used a similar _Convolution Network_ as given in the r
 ***
 ### Challenging areas
 * Training the model has been one of the major areas of concern. Due to limited resources we could not train the agent for all the 49 games as mentioned in the paper.
-
-_-add frameskip and other things-
+* The paper was not very clear about how they performed frameskipping and frame stacking. Frameskipping was done for 4 frames, which means that every 4th frame from the environment was used for the model. The remaining 3 frames were discarded. This confusion was aggrevated by the fact that the experience replay they used used last 4 frames from the frames left after discarding. That is, 16 individual game frames are required to make the initial state (x_0, x_4, x_8, x_12). Now, to get the next state, we need 4 new individual frames (x_4, x_8, x_12, x_16). Subsequent states are overlapping. In other words, the newly appended frame in the buffer is obtained from 4 skipped frames (3 discarded, 1 used).
 
 ***
 ### Inferences Drawn
