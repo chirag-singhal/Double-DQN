@@ -18,15 +18,15 @@ class Agent():
         
         #Set hyperparameters
         self.discount = 0.99
-        self.learning_rate = 0.00025
+        self.learning_rate = 0.00001
         self.batch_size = 32
         self.eps_start = 1
         self.eps_end = 0.1
-        self.eps_decay = 100000 # 1000000
+        self.eps_decay = 1000000 # 1000000
         self.primary_update = 4
         self.target_update = 10000
         self.num_steps = 50000000
-        self.max_episodes = 100 # 10000
+        self.max_episodes = 10000 # 10000
         self.episodes_per_chkpnt = 50
         self.evaluation_steps = 10000 # 1000000
         
@@ -53,7 +53,7 @@ class Agent():
         self.num_actions = self.game.get_n_actions()
         
         #Experience Replay Memory
-        self.memory_size = 15000 # 10000000
+        self.memory_size = 25000 # 10000000
         self.memory = experienceReplay(self.memory_size)
         
         #Double Deep Q Network
@@ -236,7 +236,6 @@ class Agent():
             for steps_delta in count():
                 #Update counters
                 steps += 1
-                steps_delta += 1
                 
                 #Select action using greedy policy
                 action = self.select_action(steps, state)
