@@ -130,18 +130,19 @@ class Agent():
 
         if visualise:
             self.game.env.render()
-            input()
             import time
+            time.sleep(0.5)
 
         while not done:
             if visualise:
                 self.game.env.render()
-                time.sleep(0.03)
+                time.sleep(0.1)
             state = self.game.get_input()
             action = self.select_action(self.eps_decay, state)
             reward, done = self.game.step(action)            
             total_reward += reward
 
+        self.game.env.close()
         return total_reward
 
 
