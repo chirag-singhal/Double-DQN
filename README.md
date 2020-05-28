@@ -68,6 +68,10 @@ Graphs for DQN and Double DQN respectively for Breakout:
 Double DQN does not provide a significant improvement over DQN for breakout which is in agreement with the research paper. 
 Hence, we can conclude that Double DQN works better with the environments that provide late rewards.
 
+Following is the gif for the game **Pong**
+
+<img align="centre" src="https://github.com/chirag-singhal/Double-DQN/blob/master/Rewards%20And%20Losses/pong.gif">
+
 ***
 ### Code Deployment
 The project is guaranteed to work in the given environment (environment.yml). However, not every package in the environment file is needed to run the project.

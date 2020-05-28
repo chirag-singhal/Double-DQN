@@ -131,12 +131,12 @@ class Agent():
         if visualise:
             self.game.env.render()
             import time
-            time.sleep(0.5)
+            time.sleep(0.03)
 
         while not done:
             if visualise:
                 self.game.env.render()
-                time.sleep(0.1)
+                time.sleep(0.03)
             state = self.game.get_input()
             action = self.select_action(self.eps_decay, state)
             reward, done = self.game.step(action)            
