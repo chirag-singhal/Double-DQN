@@ -132,8 +132,8 @@ class Agent():
 
         if visualise:
             self.game.env.render()
-            input()
             import time
+            time.sleep(0.03)
 
         while not done:
             if visualise:
@@ -144,6 +144,7 @@ class Agent():
             reward, done = self.game.step(action)            
             total_reward += reward
 
+        self.game.env.close()
         return total_reward
 
 

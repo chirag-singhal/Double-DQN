@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 
 from agent import Agent
 
-game_name = 'BreakoutNoFrameskip-v4' # 'Breakout-v0' # 'VideoPinball-v0'
-device = 'cuda:0'
-chkpnt_name = 'BreakoutNoFrameskip-v4_10000' # 'breakoutv4_100_test'
-pretrained_name = 'BreakoutNoFrameskip-v4_10000' # 'breakoutv4_100_test'
-verbosity = 0
+# game_name = 'BreakoutNoFrameskip-v4' # 'Breakout-v0' # 'VideoPinball-v0'
+# device = 'cuda:0'
+# chkpnt_name = 'BreakoutNoFrameskip-v4_10000' # 'breakoutv4_100_test'
+# pretrained_name = 'BreakoutNoFrameskip-v4_10000' # 'breakoutv4_100_test'
+# verbosity = 0
 
-agent = Agent(game_name, device, chkpnt_name, pretrained_name, verbosity)
+# agent = Agent(game_name, device, chkpnt_name, pretrained_name, verbosity)
 
 # game_name = 'VideoPinballNoFrameskip-v4' # 'Breakout-v0' # 'VideoPinball-v0'
 # device = 'cuda:0'
