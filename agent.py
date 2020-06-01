@@ -79,6 +79,8 @@ class Agent():
             with open('models/' + pretrained_name + '.metrics', 'rb') as metrics_file:
                 self.metrics = pickle.load(metrics_file)
             self.primary_network.load_state_dict(torch.load('models/' + pretrained_name + '.pth'))
+            self.primary_network.train()
+            self.optimizer.load_state_dict(torch.load('models/' + pretrained_name + '.opt'))
             with torch.no_grad():
                 self.target_network.load_state_dict(self.primary_network.state_dict())
                 self.target_network.eval()
@@ -226,6 +228,7 @@ class Agent():
         def save_model():
             print('Saving model and metrics ...')
             torch.save(self.primary_network.state_dict(), self.chkpnt_path + '.pth')
+            torch.save(self.optimizer.state_dict(), self.chkpnt_path + '.opt')
             with open(self.chkpnt_path + '.metrics', 'wb') as metrics_file:
                 pickle.dump(self.metrics, metrics_file)
 
